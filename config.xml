@@ -1,0 +1,26 @@
+<!--    Multiplier for damage to health ratio:
+        Healing_Per_Hit = Damage_Dealt * HealRate 
+-->
+<BerzerkerHeal HealRate = "0.25"/>
+
+<!--
+        Enable for all units:
+                0 - Only Berzerker type units
+                1 - All Sturgian Units
+                2 - All Units
+-->
+<BerzerkerHeal EnableForAllUnits = "0"/>
+
+<!--
+        Enable for player:
+                True  - Player is treated like a Berzerker and gains life leech on hit.
+                False - Player is normal.
+-->
+<BerzerkerHeal EnableForPlayer = "False"/>
+
+<!--
+        Verbose Logging:
+                True  - Spam the log with debug info.
+                False - Be quiet.
+-->
+<BerzerkerHeal VerboseLogging = "False"/>
