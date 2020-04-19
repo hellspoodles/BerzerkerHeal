@@ -34,7 +34,7 @@ namespace BerzerkerHeal
 
         //Mission check settings
         Mission currentMission;
-        bool firstCheck = false;
+        int currentMissionNumAgents = 0;
 
         protected override void OnSubModuleLoad()
         {
@@ -50,7 +50,7 @@ namespace BerzerkerHeal
                 Console.WriteLine("The current directory is {0}", CurrentFilePath);
                 doc.Load("../../modules/BerzerkerHeal/config.xml");
                 //scan through xml to find heal rate.
-                foreach (XmlNode n in doc.ChildNodes)
+                foreach (XmlNode n in doc.DocumentElement.ChildNodes)
                 {
                     if(n.Attributes != null)
                         foreach(XmlAttribute a in n.Attributes)
@@ -84,41 +84,57 @@ namespace BerzerkerHeal
 
         public override void OnMissionBehaviourInitialize(Mission mission)
         {
-            if (mission.IsFieldBattle)
+
             {
                 currentMission = mission;
-                firstCheck = true;
+                if (config.VerboseLogging)
+                    InformationManager.DisplayMessage(new InformationMessage(String.Format("Mission Initalized, Type: {0}", mission.Mode)));
             }
 
         }
 
         protected override void OnApplicationTick(float dt)
         {
-            if (currentMission != null && firstCheck)
+            try
             {
-                if (currentMission.IsLoadingFinished)
+                if (currentMission != null)
                 {
-
-                    int agentNum = 0;
-                    int humanNum = 0;
-                    foreach (Agent a in currentMission.AllAgents)
+                    if (currentMission.Mode == MissionMode.Battle ||
+                        currentMission.Mode == MissionMode.Duel ||
+                        currentMission.Mode == MissionMode.Tournament ||
+                        currentMission.Mode == MissionMode.Deployment ||
+                        currentMission.Mode == MissionMode.Stealth)
                     {
-                        agentNum++;
-                        if (a.IsHuman)
+                        //check if number of agents has changed, if so, update things.
+                        if (currentMission.Agents.Count != currentMissionNumAgents)
                         {
-
-                            humanNum++;
-                            if (a.IsPlayerControlled)
+                            if (config.VerboseLogging)
+                                InformationManager.DisplayMessage(new InformationMessage(String.Format("Mission Re-Check, Type: {0}", currentMission.Mode)));
+                            int humanNum = 0;
+                            foreach (Agent a in currentMission.Agents)
                             {
-                                //player is usually the last troop to spawn in.
-                                firstCheck = false;
+                                if (a.IsHuman)
+                                {
+                                    humanNum++;
+                                    //check if agent has the callback component
+                                    AC_HealOnHit HealOnHit = new AC_HealOnHit(a, config);
+                                    if (a.GetComponent<AC_HealOnHit>() == null)
+                                    {
+                                        a.AddComponent(HealOnHit);
+                                    }
+
+                                }
                             }
-                            AC_HealOnHit HealOnHit = new AC_HealOnHit(a, config);
+                            currentMissionNumAgents = currentMission.Agents.Count;
+                            if (config.VerboseLogging)
+                                InformationManager.DisplayMessage(new InformationMessage(String.Format("Agents Found: {0} | Human: {1}", currentMissionNumAgents, humanNum)));
                         }
                     }
-                    if(config.VerboseLogging)
-                        InformationManager.DisplayMessage(new InformationMessage(String.Format("Agents Found: {0} | Human: {1}",agentNum, humanNum)));
                 }
+            }
+            catch (System.NullReferenceException)
+            {
+                currentMission = null;
             }
         }
     }
@@ -128,7 +144,6 @@ namespace BerzerkerHeal
         BerzerkerHealConfig config;
         public AC_HealOnHit(Agent agent, BerzerkerHealConfig _config) : base(agent)
         {
-            agent.AddComponent(this);
             config = _config;
         }
 
@@ -157,6 +172,7 @@ namespace BerzerkerHeal
                             {
                                 float healAmount = damage * config.healMult;
                                 affectorAgent.Health += healAmount;
+                                if (affectorAgent.HealthLimit < affectorAgent.Health) affectorAgent.Health = affectorAgent.HealthLimit;
                                 if (config.VerboseLogging)
                                     InformationManager.DisplayMessage(new InformationMessage(String.Format("{0} hit for {1} recovered {2}", affectorAgent.Name, damage, healAmount)));
                             }
@@ -166,6 +182,7 @@ namespace BerzerkerHeal
                             {
                                 float healAmount = damage * config.healMult;
                                 affectorAgent.Health += healAmount;
+                                if (affectorAgent.HealthLimit < affectorAgent.Health) affectorAgent.Health = affectorAgent.HealthLimit;
                                 if (config.VerboseLogging)
                                     InformationManager.DisplayMessage(new InformationMessage(String.Format("{0} hit for {1} recovered {2}", affectorAgent.Name, damage, healAmount)));
                             }
@@ -179,6 +196,7 @@ namespace BerzerkerHeal
                                 {
                                     float healAmount = damage * config.healMult;
                                     affectorAgent.Health += healAmount;
+                                    if (affectorAgent.HealthLimit < affectorAgent.Health) affectorAgent.Health = affectorAgent.HealthLimit;
                                     if (config.VerboseLogging)
                                         InformationManager.DisplayMessage(new InformationMessage(String.Format("{0} hit for {1} recovered {2}", affectorAgent.Name, damage, healAmount)));
                                 }
