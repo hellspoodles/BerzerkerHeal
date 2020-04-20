@@ -17,13 +17,15 @@ namespace BerzerkerHeal
         public int EnableForAllUnits;
         public bool EnableForPlayer;
         public bool VerboseLogging;
+        public List<int> EnabledUnits;
 
-        public BerzerkerHealConfig(float _healMult, int _EnableForAllUnits, bool _EnableForPlayer, bool _VerboseLogging)
+        public BerzerkerHealConfig(float _healMult, int _EnableForAllUnits, bool _EnableForPlayer, bool _VerboseLogging, List<int> _EnabledUnits)
         {
             healMult = _healMult;
             EnableForAllUnits = _EnableForAllUnits;
             EnableForPlayer = _EnableForPlayer;
             VerboseLogging = _VerboseLogging;
+            EnabledUnits = _EnabledUnits;
         }
     }
 
@@ -39,7 +41,9 @@ namespace BerzerkerHeal
         protected override void OnSubModuleLoad()
         {
             //set default config params
-            config = new BerzerkerHealConfig(0.25f, 0, false, false);
+            List<int> defaultEnabledTroops = new List<int>();
+            
+            config = new BerzerkerHealConfig(0.25f, 0, false, false, defaultEnabledTroops);
 
             //read xml and get heal mult.
             XmlDocument doc = new XmlDocument();
@@ -71,14 +75,20 @@ namespace BerzerkerHeal
                             {
                                 config.VerboseLogging = bool.Parse(a.Value);
                             }
+                            if (a.Name.Equals("EnabledUnit"))
+                            {
+                                //uses a hash code list so that there are less string compares and it only compares ints (32 bit vs 128+ bit)
+                                config.EnabledUnits.Add(a.Value.GetHashCode()); 
+                            }
                         }
                 }
             }
             catch (System.IO.FileNotFoundException)
             {
-                
+                defaultEnabledTroops.Add("Sturgian Berserker".GetHashCode());
+                defaultEnabledTroops.Add("Sturgian Ulfhednar".GetHashCode());
             }
-            
+            int x = 3;
             
         }
 
@@ -189,16 +199,18 @@ namespace BerzerkerHeal
                             break;
 
                         default:
-                            //defaults to only berzerker type units.
-                            if (affectorAgent.Character.Culture.GetCultureCode() == CultureCode.Sturgia && (affectorAgent.Character.Level == 21 || affectorAgent.Character.Level == 26))
+                            //defaults to only named type units
+                            int nameHash = affectorAgent.Name.GetHashCode();
+                            foreach(int a in config.EnabledUnits)
                             {
-                                if (affectorAgent.Name.Equals("Sturgian Ulfhednar") || affectorAgent.Name.Equals("Sturgian Berserker"))
+                                if(a == nameHash)
                                 {
                                     float healAmount = damage * config.healMult;
                                     affectorAgent.Health += healAmount;
                                     if (affectorAgent.HealthLimit < affectorAgent.Health) affectorAgent.Health = affectorAgent.HealthLimit;
                                     if (config.VerboseLogging)
                                         InformationManager.DisplayMessage(new InformationMessage(String.Format("{0} hit for {1} recovered {2}", affectorAgent.Name, damage, healAmount)));
+                                    break;
                                 }
                             }
                             break;
